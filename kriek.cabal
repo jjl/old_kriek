@@ -1,0 +1,59 @@
+name:                kriek
+version:             0.1.0.0
+synopsis:            A low level systems programming lisp
+description:         Please see README.md
+homepage:            https://github.com/jjl/kriek
+license:             BSD3
+license-file:        LICENSE
+author:              James Laver
+maintainer:          james@seriesofpipes.com
+copyright:           2016 James Laver
+category:            System
+build-type:          Simple
+-- extra-source-files:
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src/hs
+  exposed-modules:     Kriek
+                     , Kriek.Parser
+                     , Kriek.AST
+                     , Kriek.IR
+                     , Kriek.Runtime
+  build-depends:       base >= 4.9 && < 5
+                     , bytestring
+                     , text
+                     , scientific
+                     , hashable
+                     , containers
+                     , lens
+                     , language-javascript
+                     , parsers
+                     , megaparsec
+                     , text-icu
+                     , mtl
+                     , transformers
+                     , unordered-containers
+  default-language:    Haskell2010
+
+executable kriek
+  hs-source-dirs:      .
+  main-is:             Main.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base
+                     , kriek
+  default-language:    Haskell2010
+
+test-suite kriek-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , kriek
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/jjl/kriek
+
