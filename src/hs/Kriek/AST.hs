@@ -15,13 +15,13 @@ class HasAST a where
 type Meta = [RecItem]
 
 newtype Name = Name String
-  deriving (Eq, Generic, Hashable)
+  deriving (Eq, Generic, Hashable, Show)
 
 data Position = Position { filename :: String, line :: Word, col :: Word }
-  deriving (Eq, Generic, Hashable)
+  deriving (Eq, Generic, Hashable, Show)
 
 data Form = Form AST (Maybe Position) (Maybe Meta)
-  deriving (Eq, Generic, Hashable)
+  deriving (Eq, Generic, Hashable, Show)
 
 instance MaybeHasPosition Form where
   position (Form _ p _) = p

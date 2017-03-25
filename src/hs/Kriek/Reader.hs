@@ -44,12 +44,12 @@ kComment = do _ <- char ';' <?> "comment marker"
               _ <- char '\n'
               return ()
   where h x = (fromEnum x) > 0x7f
-              
+
 kBareSym :: Parser AST
 kBareSym = do s <- oneOf start <?> "symbol start character"
               r <- many (oneOf rest <?> "symbol character")
               return $ KSymbol (Name $ s:r)
-  where start = "abcdefghijklmnopqrstuvwxyz" 
+  where start = "abcdefghijklmnopqrstuvwxyz"
         rest = start ++ ""
 
 kQSym :: Parser AST
@@ -62,7 +62,7 @@ kKeyword = do _ <- char ':'
               s <- oneOf start <?> "keyword start character"
               r <- some (oneOf rest) <?> "keyword character"
               return $ KKeyword (Name $ s:r)
-  where start = "abcdefghijklmnopqrstuvwxyz-" 
+  where start = "abcdefghijklmnopqrstuvwxyz-"
         rest = "1234567890:" ++ start
 
 kNum :: Parser AST
@@ -101,7 +101,7 @@ kMeta = do _ <- string "^{" >> wsc
            return $ case ris of
              [] -> Nothing
              _ -> Just ris
-           
+
 kNil :: Parser AST
 kNil = string "nil" >> return KNil
 
