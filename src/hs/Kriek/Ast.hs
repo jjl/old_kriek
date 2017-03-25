@@ -51,4 +51,5 @@ instance Show a => Show (AST a) where
   show (KTuple   l) = "[" ++ (intercalate "," (fmap show l)) ++ "]"
   show (KRecord  l) = "{" ++ (intercalate "," (fmap h l)) ++"}"
     where h (((Name k),_),(Form v _ _)) = ':':k ++ ' ':(show v)
+  show (KRuntime a) = show a
 
