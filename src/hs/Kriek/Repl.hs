@@ -12,11 +12,11 @@ flushStr str = putStr str >> hFlush stdout
 
 -- String to use for the REPL prompt
 prompt :: String
-prompt = "kriek>"
+prompt = "kriek> "
 
 read :: IO [Form]
 read = do
-    flushStr $ prompt ++ " "
+    flushStr prompt
     input <- getLine
     case parse program "" input of
         Left e -> error $ parseErrorPretty e
