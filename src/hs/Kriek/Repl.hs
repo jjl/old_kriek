@@ -1,21 +1,32 @@
-module Kriek.Repl (read, print, eval, repl) where
+module Kriek.Repl (repl) where
 
 import Kriek.AST (Form)
 import Kriek.Reader (program)
 import Text.Megaparsec (parse, parseErrorPretty)
+import System.IO (stdout, hFlush)
 import Prelude hiding (print, read)
 
-read :: IO String
-read = getLine
+-- Flush string to stdout
+flushStr :: String -> IO ()
+flushStr str = putStr str >> hFlush stdout
 
-eval :: String -> String
+-- String to use for the REPL prompt
+prompt :: String
+prompt = "kriek>"
+
+read :: IO [Form]
+read = do
+    flushStr $ prompt ++ " "
+    input <- getLine
+    case parse program "" input of
+        Left e -> error $ parseErrorPretty e
+        Right x -> return x
+
+eval :: [Form] -> [Form]
 eval = id
 
-print :: String -> IO ()
+print :: [Form] -> IO ()
 print = putStrLn . show
 
 repl :: IO ()
-repl = do
-    input <- read
-    print $ eval input
-    repl
+repl = read >>= (print . eval) >> repl
