@@ -16,9 +16,11 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src/hs
   exposed-modules:     Kriek
-                     , Kriek.AST
+                     , Kriek.Ast
                      , Kriek.Reader
                      , Kriek.Repl
+                     , Kriek.Runtime
+                     , Kriek.Runtime.Library
   build-depends:       base >= 4.9 && < 5
                      , bytestring
                      , text

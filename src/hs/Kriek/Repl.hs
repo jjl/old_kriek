@@ -1,7 +1,8 @@
 module Kriek.Repl (repl) where
 
-import Kriek.AST (Form)
+import Kriek.Ast
 import Kriek.Reader (program)
+import Kriek.Runtime.Library
 import Text.Megaparsec (parse, parseErrorPretty)
 import System.IO (stdout, hFlush)
 import Prelude hiding (print, read)
@@ -14,7 +15,7 @@ flushStr str = putStr str >> hFlush stdout
 prompt :: String
 prompt = "kriek> "
 
-read :: IO [Form]
+read :: IO [Form a]
 read = do
     flushStr prompt
     input <- getLine
@@ -22,10 +23,10 @@ read = do
         Left e -> error $ parseErrorPretty e
         Right x -> return x
 
-eval :: [Form] -> [Form]
+eval :: [Form RT] -> [Form RT]
 eval = id
 
-print :: [Form] -> IO ()
+print :: [Form RT] -> IO ()
 print = putStrLn . show
 
 repl :: IO ()

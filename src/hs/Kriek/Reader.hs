@@ -1,7 +1,7 @@
-{-# language ViewPatterns, ScopedTypeVariables #-}
+{-# language ViewPatterns #-}
 module Kriek.Reader (form, program) where
 
-import Kriek.AST
+import Kriek.Ast
 import Control.Applicative
 import Control.Monad.State
 import Data.Scientific (isInteger, coefficient)
@@ -44,20 +44,20 @@ kComment = do _ <- char ';' <?> "comment marker"
               _ <- char '\n'
               return ()
   where h x = (fromEnum x) > 0x7f
-
-kBareSym :: Parser AST
+              
+kBareSym :: Parser (AST a)
 kBareSym = do s <- oneOf start <?> "symbol start character"
               r <- many (oneOf rest <?> "symbol character")
               return $ KSymbol (Name $ s:r)
   where start = "abcdefghijklmnopqrstuvwxyz"
         rest = start ++ ""
 
-kQSym :: Parser AST
+kQSym :: Parser (AST a)
 kQSym = between (char '|') (char '|') h
   where h = (KSymbol . Name) <$> some (noneOf banned)
         banned = "|\n" ++ forbidden
 
-kKeyword :: Parser AST
+kKeyword :: Parser (AST a)
 kKeyword = do _ <- char ':'
               s <- oneOf start <?> "keyword start character"
               r <- some (oneOf rest) <?> "keyword character"
@@ -65,54 +65,54 @@ kKeyword = do _ <- char ':'
   where start = "abcdefghijklmnopqrstuvwxyz-"
         rest = "1234567890:" ++ start
 
-kNum :: Parser AST
+kNum :: Parser (AST a)
 kNum = do n <- L.signed (return ()) L.number
           return $ case (isInteger n) of
             True  -> KInt (coefficient n)
             False -> KFloat n
 
-kString :: Parser AST
+kString :: Parser (AST a)
 kString = KString <$> between (char '"') (char '"') (many L.charLiteral)
 
-kChar :: Parser AST
+kChar :: Parser (AST a)
 kChar = string "#\\" >> KChar <$> L.charLiteral
 
-kListy :: (Char, Char) -> Parser [Form]
+kListy :: (Char, Char) -> Parser [Form a]
 kListy (s,e) = between (char s) (char e) h
   where h = trim $ sepBy form mwsc
 
-kList :: Parser AST
+kList :: Parser (AST a)
 kList = KList <$> kListy ('(',')')
 
-kTuple :: Parser AST
+kTuple :: Parser (AST a)
 kTuple = KTuple <$> kListy ('[',']')
 
-kRecItem :: Parser RecItem
+kRecItem :: Parser (RecItem a)
 kRecItem = do p <- sourcePos
               (KKeyword n) <- kKeyword
               _ <- skipSome sp
               f <- form
               return ((n, Just p), f)
 
-kMeta :: Parser (Maybe Meta)
+kMeta :: Parser (Maybe (Meta a))
 kMeta = do _ <- string "^{" >> wsc
            ris <- wscSep kRecItem
            _ <- skipMany ws >> char '}'
            return $ case ris of
              [] -> Nothing
              _ -> Just ris
-
-kNil :: Parser AST
+           
+kNil :: Parser (AST a)
 kNil = string "nil" >> return KNil
 
-kAst :: Parser AST
+kAst :: Parser (AST a)
 kAst = kQSym <|> kList <|> kTuple <|> kString <|> kKeyword <|> kChar <|> kNil <|> kNum <|> kBareSym
 
-form :: Parser Form
+form :: Parser (Form a)
 form = do p <- sourcePos
           m <- kMeta
           o <- kAst <* wsc
           return $ Form o (Just p) m
 
-program :: Parser [Form]
+program :: Parser [Form a]
 program = trim $ wscSep form
