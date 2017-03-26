@@ -20,8 +20,10 @@ read :: IO [Form a]
 read = do
     flushStr prompt
     input <- getLine
-    case parse program "" input of
-        Left e -> error $ parseErrorPretty e
+    case parse program "" (input ++ "\n") of
+        Left e -> do
+          putStrLn $ parseErrorPretty e
+          return []
         Right x -> return x
 
 eval :: [Form RT] -> Runtime [Form RT]
