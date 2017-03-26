@@ -49,11 +49,10 @@ kBareSym = do s <- oneOf start <?> "symbol start character"
   where start = "abcdefghijklmnopqrstuvwxyz"
         rest = start ++ ""
 
--- FIXME
 kQSym :: Parser (AST a)
 kQSym = between (char '|') (char '|') h
   where h = (KSymbol . Name) <$> some (noneOf banned)
-        banned = "|\n" ++ forbidden
+        banned = " |\n" ++ forbidden
 
 kKeyword :: Parser (AST a)
 kKeyword = do _ <- char ':'
@@ -69,9 +68,10 @@ kNum = do n <- L.signed (return ()) L.number
                       then KInt (coefficient n)
                       else KFloat n
 
--- FIXME
+-- TODO: Handle escapes
 kString :: Parser (AST a)
-kString = KString <$> between (char '"') (char '"') (many L.charLiteral)
+kString = KString <$> between (char '"') (char '"') str
+  where str = many (noneOf "\"")
 
 kChar :: Parser (AST a)
 kChar = string "#\\" >> KChar <$> L.charLiteral
@@ -81,11 +81,9 @@ kListy (s,e) =
   between (char s) (char e) h
   where h = trim $ sepBy form space
 
--- FIXME
 kList :: Parser (AST a)
 kList = KList <$> kListy ('(',')')
 
--- FIXME
 kTuple :: Parser (AST a)
 kTuple = KTuple <$> kListy ('[',']')
 
