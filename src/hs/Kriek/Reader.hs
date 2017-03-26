@@ -68,10 +68,8 @@ kNum = do n <- L.signed (return ()) L.number
                       then KInt (coefficient n)
                       else KFloat n
 
--- TODO: Handle escapes
 kString :: Parser (AST a)
-kString = KString <$> between (char '"') (char '"') str
-  where str = many (noneOf "\"")
+kString = KString <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
 kChar :: Parser (AST a)
 kChar = string "#\\" >> KChar <$> L.charLiteral
