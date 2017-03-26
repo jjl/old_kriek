@@ -52,7 +52,7 @@ kBareSym = do s <- oneOf start <?> "symbol start character"
 kQSym :: Parser (AST a)
 kQSym = between (char '|') (char '|') h
   where h = (KSymbol . Name) <$> some (noneOf banned)
-        banned = " |\n" ++ forbidden
+        banned = "|\n" ++ forbidden
 
 kKeyword :: Parser (AST a)
 kKeyword = do _ <- char ':'
@@ -77,8 +77,7 @@ kChar :: Parser (AST a)
 kChar = string "#\\" >> KChar <$> L.charLiteral
 
 kListy :: (Char, Char) -> Parser [Form a]
-kListy (s,e) =
-  between (char s) (char e) h
+kListy (s,e) = between (char s) (char e) h
   where h = trim $ sepBy form space
 
 kList :: Parser (AST a)
