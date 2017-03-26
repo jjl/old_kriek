@@ -34,13 +34,8 @@ spToPos (SourcePos n l c) = Position n (unPos l) (unPos c)
 sourcePos :: Parser Position
 sourcePos = (spToPos . LNE.head . statePos) `liftM` getParserState
 
--- FIXME: different case
 kComment :: Parser ()
-kComment = do _ <- char ';' <?> "comment marker"
-              _ <- many (satisfy h) <?> ""
-              _ <- char '\n'
-              return ()
-  where h x = fromEnum x > 0x7f
+kComment = L.skipLineComment ";"
 
 kBareSym :: Parser (AST a)
 kBareSym = do s <- oneOf start <?> "symbol start character"
