@@ -16,7 +16,7 @@ flushStr str = putStr str >> hFlush stdout
 prompt :: String
 prompt = "kriek> "
 
-read :: IO [Form a]
+read :: IO [Form]
 read = do
     flushStr prompt
     input <- getLine
@@ -26,10 +26,10 @@ read = do
           return []
         Right x -> return x
 
-eval :: State -> [Form RT] -> IO (State, [Form RT])
+eval :: State -> [Form] -> IO (State, [Form])
 eval s f = return (s,f) -- runStateT
 
-print :: [Form RT] -> IO ()
+print :: [Form] -> IO ()
 print = putStrLn . show
 
 repl :: State -> IO ()
