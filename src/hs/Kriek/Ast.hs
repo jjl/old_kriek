@@ -49,12 +49,12 @@ instance Show AST where
   show (AInt i) = show i
   show (AFloat  f) = show f
   show (AChar   c) = show c
-  show (AString s) = s
+  show (AString s) = "\"" ++ s ++ "\""
   show (ASymbol  n) = show n
   show (AKeyword n) = ':':(show n)
-  show (AList    l) = "(" ++ (intercalate "," (fmap show l)) ++ ")"
-  show (ATuple   l) = "[" ++ (intercalate "," (fmap show l)) ++ "]"
-  show (ARecord  l) = "{" ++ (intercalate "," (fmap h l)) ++"}"
+  show (AList    l) = "(" ++ (intercalate ", " (fmap show l)) ++ ")"
+  show (ATuple   l) = "[" ++ (intercalate ", " (fmap show l)) ++ "]"
+  show (ARecord  l) = "{" ++ (intercalate ", " (fmap h l)) ++"}"
     where h ((Form k _),(Form v _)) = (show k) ++ ' ':(show v)
 
 
