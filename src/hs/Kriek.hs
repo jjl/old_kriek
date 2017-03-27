@@ -19,7 +19,7 @@ compile = Compile
   , out = def &= argPos 1 &= typ "OUT"}
 
 
-mode = cmdArgsMode $ modes [repl, compile]
+mode = cmdArgsMode $ modes [repl, compile &= auto]
   &= program "kriek"
   &= summary "Kriek v0.1"
   &= help "A statically typed lisp-like language"
