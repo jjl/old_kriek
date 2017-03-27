@@ -17,6 +17,7 @@ library
   hs-source-dirs:      src/hs
   exposed-modules:     Kriek
                      , Kriek.Ast
+                     , Kriek.Compiler
                      , Kriek.Reader
                      , Kriek.Repl
                      , Kriek.Runtime
