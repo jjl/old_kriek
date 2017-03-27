@@ -1,6 +1,6 @@
 name:                kriek
 version:             0.1.0.0
-synopsis:            A low level systems programming lisp
+synopsis:            A statically typed lisp-like language
 description:         Please see README.md
 homepage:            https://github.com/jjl/kriek
 license:             BSD3

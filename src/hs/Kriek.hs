@@ -18,9 +18,15 @@ compile = Compile
   { src = def &= argPos 0 &= typ "SRC"
   , out = def &= argPos 1 &= typ "OUT"}
 
+
+mode = cmdArgsMode $ modes [repl, compile]
+  &= program "kriek"
+  &= summary "Kriek v0.1"
+  &= help "A statically typed lisp-like language"
+
 main :: IO ()
 main = do
-  args <- cmdArgs (modes [repl, compile])
+  args <- cmdArgsRun mode
   case args of
     Repl -> R.repl newState
     Compile src out -> C.compileFile src out
