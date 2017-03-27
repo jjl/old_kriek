@@ -37,54 +37,47 @@ sourcePos = (spToPos . LNE.head . statePos) `liftM` getParserState
 kComment :: Parser ()
 kComment = L.skipLineComment ";"
 
-kBareSym :: Parser (AST a)
+kBareSym :: Parser AST
 kBareSym = do s <- oneOf start <?> "symbol start character"
               r <- many (oneOf rest <?> "symbol character")
-              return $ KSymbol (Name $ s:r)
+              return $ ASymbol (Name $ s:r)
   where start = "abcdefghijklmnopqrstuvwxyz"
         rest = start ++ ""
 
-kQSym :: Parser (AST a)
+kQSym :: Parser AST
 kQSym = between (char '|') (char '|') h
-  where h = (KSymbol . Name) <$> some (noneOf banned)
+  where h = (ASymbol . Name) <$> some (noneOf banned)
         banned = "|\n" ++ forbidden
 
-kKeyword :: Parser (AST a)
+kKeyword :: Parser AST
 kKeyword = do _ <- char ':'
               s <- oneOf start <?> "keyword start character"
               r <- some (oneOf rest) <?> "keyword character"
-              return $ KKeyword (Name $ s:r)
+              return $ AKeyword (Name $ s:r)
   where start = "abcdefghijklmnopqrstuvwxyz-"
         rest = "1234567890:" ++ start
 
-kNum :: Parser (AST a)
+kNum :: Parser AST
 kNum = do n <- L.signed (return ()) L.number
           return $ if isInteger n
-                      then KInt (coefficient n)
-                      else KFloat n
+                      then AInt (coefficient n)
+                      else AFloat n
 
-kString :: Parser (AST a)
-kString = KString <$> (char '"' >> manyTill L.charLiteral (char '"'))
+kString :: Parser AST
+kString = AString <$> (char '"' >> manyTill L.charLiteral (char '"'))
 
-kChar :: Parser (AST a)
-kChar = string "#\\" >> KChar <$> L.charLiteral
+kChar :: Parser AST
+kChar = string "#\\" >> AChar <$> L.charLiteral
 
-kListy :: (Char, Char) -> Parser [Form a]
+kListy :: (Char, Char) -> Parser [Form]
 kListy (s,e) = between (char s) (char e) h
   where h = trim $ sepBy form space
 
-kList :: Parser (AST a)
-kList = KList <$> kListy ('(',')')
+kList :: Parser AST
+kList = AList <$> kListy ('(',')')
 
-kTuple :: Parser (AST a)
-kTuple = KTuple <$> kListy ('[',']')
-
--- kRecItem :: Parser (RecItem a)
--- kRecItem = do p <- sourcePos
---               (KKeyword n) <- kKeyword
---               _ <- skipSome space
---               f <- form
---               return ((n, Just p), f)
+kTuple :: Parser AST
+kTuple = ATuple <$> kListy ('[',']')
 
 -- kMeta :: Parser (Maybe (Meta a))
 -- kMeta = do _ <- string "^{" >> wsc
@@ -94,17 +87,23 @@ kTuple = KTuple <$> kListy ('[',']')
 --              [] -> Nothing
 --              _ -> Just ris
 
-kNil :: Parser (AST a)
-kNil = string "nil" >> return KNil
+kRecItem :: Parser RecItem
+kRecItem = do f1 <- form
+              _ <- skipSome space
+              f2 <- form
+              return (f1,f2)
 
-kAst :: Parser (AST a)
+kNil :: Parser AST
+kNil = string "nil" >> return ANil
+
+kAst :: Parser AST
 kAst = kQSym <|> kList <|> kTuple <|> kString <|> kKeyword <|> kChar <|> kNil <|> kNum <|> kBareSym
 
-form :: Parser (Form a)
+form :: Parser Form
 form = do p <- sourcePos
           -- m <- kMeta     -- FIXME: this is optional
           o <- kAst <* wsc
           return $ Form o (Just p)
 
-program :: Parser [Form a]
+program :: Parser [Form]
 program = trim $ wscSep form

@@ -6,50 +6,55 @@ import Data.Hashable (Hashable)
 import Data.List (intercalate)
 import Data.Scientific
 
-type Meta a = [RecItem a]
+type Meta = [RecItem]
 
-newtype Name = Name String
+
+data Name = Name String
+          | NSName String String
   deriving (Eq, Generic, Hashable)
+
+instance Show Name where
+  show (Name s) = s
+  show (NSName n s) = s ++ '/':(show s)
 
 data Position = Position { filename :: String, line :: Word, col :: Word }
   deriving (Eq, Generic, Hashable)
 
-data Form a = Form (AST a) (Maybe Position) -- (Maybe (Meta a))
+data Form = Form AST (Maybe Position) -- (Maybe Meta)
   deriving (Generic, Hashable)
 
-instance Eq a => Eq (Form a) where
+instance Eq Form where
   (Form a _) == (Form b _) = a == b
 
-type RecItem a = ((Name, Maybe Position), Form a)
+type RecItem = (Form, Form)
 
-data AST a
-  = KNil
-  | KInt Integer
-  | KFloat Scientific
-  | KChar Char
-  | KSymbol Name
-  | KKeyword Name
-  | KString String
-  | KList [Form a]
-  | KTuple [Form a]
-  | KRecord [RecItem a]
-  | KRuntime a
+data AST
+  = ANil
+  | AInt Integer
+  | AFloat Scientific
+  | AChar Char
+  | ASymbol Name
+  | AKeyword Name
+  | AString String
+  | AList [Form]
+  | ATuple [Form]
+  | ARecord [RecItem]
   deriving (Eq, Generic, Hashable)
 
-instance Show a => Show (Form a) where
+instance Show Form where
   show (Form a _) = show a
 
-instance Show a => Show (AST a) where
-  show KNil = "nil"
-  show (KInt i) = show i
-  show (KFloat  f) = show f
-  show (KChar   c) = show c
-  show (KString s) = "\"" ++ s ++ "\""
-  show (KSymbol  (Name n)) = n
-  show (KKeyword (Name n)) = ':':n
-  show (KList    l) = "(" ++ (intercalate ", " (fmap show l)) ++ ")"
-  show (KTuple   l) = "[" ++ (intercalate ", " (fmap show l)) ++ "]"
-  show (KRecord  l) = "{" ++ (intercalate ", " (fmap h l)) ++"}"
-    where h (((Name k),_),(Form v _)) = ':':k ++ ' ':(show v)
-  show (KRuntime a) = show a
+instance Show AST where
+  show ANil = "nil"
+  show (AInt i) = show i
+  show (AFloat  f) = show f
+  show (AChar   c) = show c
+  show (AString s) = s
+  show (ASymbol  n) = show n
+  show (AKeyword n) = ':':(show n)
+  show (AList    l) = "(" ++ (intercalate "," (fmap show l)) ++ ")"
+  show (ATuple   l) = "[" ++ (intercalate "," (fmap show l)) ++ "]"
+  show (ARecord  l) = "{" ++ (intercalate "," (fmap h l)) ++"}"
+    where h ((Form k _),(Form v _)) = (show k) ++ ' ':(show v)
+
 

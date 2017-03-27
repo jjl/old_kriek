@@ -7,11 +7,13 @@ import Control.Monad.Except
 import qualified Data.HashMap.Strict as M
 import Kriek.Ast
 
-type Fn = [Form RT] -> Runtime (Form RT)
+type Fn = [Form] -> Runtime (Form)
 
-type Runtime r = StateT State IO r
+data Scope = Scope { scopeRec :: [Form], scopeNonrec :: [Form]}
 
-type Map = M.HashMap Name (AST RT)
+type Runtime r = ReaderT Scope (StateT State IO) r
+
+type Map = M.HashMap Name AST
 
 data RT = RTFn Fn
 
@@ -21,7 +23,17 @@ instance Show RT where
 instance Eq RT where
   _ == _ = False
 
-data State = State { stateVals :: Map, stateMacros :: M.HashMap Name Fn }
+data IName = IName Name
+           | IRename { rFrom :: Name, rTo ::  Name }
+
+data Import = Import
+  { iModule :: IName
+  , iImports :: [IName] }
+
+data State = State
+  { stateImports :: [(Name, Name)]
+  , stateVals :: Map
+  , stateMacros :: M.HashMap Name Fn }
 
 newState :: State
-newState = State M.empty M.empty
+newState = State [] M.empty M.empty

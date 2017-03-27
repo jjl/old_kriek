@@ -1,6 +1,27 @@
 # Kriek
 
-A statically typed lisp-like languge for the browser.
+A statically typed lisp-like language.
+
+First target will be javascript
+
+## (Intended) Features
+
+* Hindley-Milner inspired type system
+  * Higher kinded types
+  * Effects system inspired by the Freer monad
+  * Typeclasses ("contracts")
+  * Ad-hoc records and unions
+  * Continuations
+  * Easy FFI
+  * Type Inference
+* Lisp macros
+  * Full syntax rearranging power through code at compile time
+* Garbage collection
+  * capability to avoid GC through linear/affine types (still deciding)
+
+## Notepad
+
+
 
 ## Contributors
 

@@ -26,12 +26,13 @@ read = do
           return []
         Right x -> return x
 
-eval :: [Form RT] -> Runtime [Form RT]
-eval = return
+eval :: State -> [Form RT] -> IO (State, [Form RT])
+eval s f = return (s,f) -- runStateT
 
 print :: [Form RT] -> IO ()
 print = putStrLn . show
 
 repl :: State -> IO ()
-repl s = read >>= h >>= print >> repl s
-  where h f = evalStateT (eval f) newState
+repl s = read >>= eval s >>= h
+  where h (s2, f) = print f >> repl s2
+
