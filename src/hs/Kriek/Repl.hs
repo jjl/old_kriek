@@ -2,7 +2,7 @@ module Kriek.Repl (repl) where
 
 import Kriek.Ast
 import Kriek.Reader (program)
-import Kriek.Runtime.Data
+import Kriek.Ir
 import Control.Monad.State.Strict hiding (State)
 import Text.Megaparsec (parse, parseErrorPretty)
 import System.IO (stdout, hFlush)

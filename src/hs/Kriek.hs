@@ -3,7 +3,7 @@ module Kriek where
 
 import qualified Kriek.Compiler as C
 import qualified Kriek.Repl as R
-import Kriek.Runtime.Data (newState)
+import Kriek.Ir (newState)
 import System.Console.CmdArgs
 
 data KriekCmd = Repl

@@ -19,11 +19,11 @@ instance Show Name where
 data Position = Position { filename :: String, line :: Word, col :: Word }
   deriving (Eq, Generic, Hashable)
 
-data Form = Form AST (Maybe Position) -- (Maybe Meta)
+data Form = Form AST (Maybe Position) (Maybe Meta)
   deriving (Generic, Hashable)
 
 instance Eq Form where
-  (Form a _) == (Form b _) = a == b
+  (Form a _ _) == (Form b _ _) = a == b
 
 type RecItem = (Form, Form)
 
@@ -41,7 +41,7 @@ data AST
   deriving (Eq, Generic, Hashable)
 
 instance Show Form where
-  show (Form a _) = show a
+  show (Form a _ _) = show a
 
 instance Show AST where
   show ANil = "nil"
@@ -54,6 +54,6 @@ instance Show AST where
   show (AList    l) = "(" ++ (intercalate ", " (fmap show l)) ++ ")"
   show (ATuple   l) = "[" ++ (intercalate ", " (fmap show l)) ++ "]"
   show (ARecord  l) = "{" ++ (intercalate ", " (fmap h l)) ++"}"
-    where h ((Form k _),(Form v _)) = (show k) ++ ' ':(show v)
+    where h ((Form k _ _),(Form v _ _)) = (show k) ++ ' ':(show v)
 
 

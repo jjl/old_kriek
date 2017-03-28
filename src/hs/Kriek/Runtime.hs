@@ -3,13 +3,13 @@ module Kriek.Runtime where
 import Control.Monad.State.Strict
 import qualified Data.HashMap.Strict as M
 import Kriek.Ast
-import Kriek.Runtime.Data
+import Kriek.Ir
 
 findMacro :: Name -> Runtime (Maybe Fn)
 findMacro n = gets (M.lookup n . stateMacros)
 
 macroexpand1 :: Form -> Runtime Form
-macroexpand1 f@(Form (AList ((Form (ASymbol n) _):rst)) _) =
+macroexpand1 f@(Form (AList ((Form (ASymbol n) _ _):rst)) _ _) =
   do m <- (findMacro n)
      case m of
        Just mac -> mac rst
@@ -20,15 +20,15 @@ macroexpand :: Form -> Runtime Form
 macroexpand f = do f' <- macroexpand1 f
                    case f == f' of
                      True -> case f' of
-                       Form (AList (s:r)) p ->
+                       Form (AList (s:r)) p m ->
                          do r' <- mapM macroexpand r
-                            return $ Form (AList (s:r')) p
-                       Form (ATuple l) p ->
+                            return $ Form (AList (s:r')) p m
+                       Form (ATuple l) p m ->
                          do l' <- mapM macroexpand l
-                            return $ Form (ATuple l') p
-                       Form (ARecord l) p ->
+                            return $ Form (ATuple l') p m
+                       Form (ARecord l) p m ->
                          do l' <- mapM h l
-                            return $ Form (ARecord l') p
+                            return $ Form (ARecord l') p m
                        _ -> return f'
                      False -> macroexpand f'
   where h (x,y) = macroexpand y >>= \y' -> return (x, y')

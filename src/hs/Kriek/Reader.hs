@@ -103,7 +103,7 @@ form :: Parser Form
 form = do p <- sourcePos
           -- m <- kMeta     -- FIXME: this is optional
           o <- kAst <* wsc
-          return $ Form o (Just p)
+          return $ Form o (Just p) Nothing
 
 program :: Parser [Form]
 program = trim $ wscSep form

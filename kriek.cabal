@@ -18,10 +18,10 @@ library
   exposed-modules:     Kriek
                      , Kriek.Ast
                      , Kriek.Compiler
+                     , Kriek.Ir
                      , Kriek.Reader
                      , Kriek.Repl
                      , Kriek.Runtime
-                     , Kriek.Runtime.Data
                      , Kriek.Runtime.Library
   build-depends:       base >= 4.9 && < 5
                      , bytestring
