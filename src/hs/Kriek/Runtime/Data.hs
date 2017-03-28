@@ -9,11 +9,16 @@ import Kriek.Ast
 
 type Fn = [Form] -> Runtime (Form)
 
-data Scope = Scope { scopeRec :: [Form], scopeNonrec :: [Form]}
-
-type Runtime r = ReaderT Scope (StateT State IO) r
+type NamedForm = (String, Form)
 
 type Map = M.HashMap Name AST
+
+data Scope = Scope
+  { scopeRec :: M.HashMap Name AST
+  , scopeNonrec :: [NamedForm]
+  , scopeImports :: (String, String) }
+
+type Runtime r = ReaderT Scope (StateT State IO) r
 
 data RT = RTFn Fn
 
@@ -37,3 +42,4 @@ data State = State
 
 newState :: State
 newState = State [] M.empty M.empty
+

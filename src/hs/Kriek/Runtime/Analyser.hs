@@ -9,7 +9,7 @@ import Data.HashMap.Strict
 import Kriek.Ast
 import Kriek.Runtime.Data
 
-import Prelude hiding (read)
+import Prelude hiding (read, lookup)
 
 data ErrorId = Unimplemented
              | Expected String
@@ -55,7 +55,6 @@ data Op = OValue Value
         -- | OCase
         -- | OVar
         -- | OCall Analysis [Analysis]
-        -- | OValue (Form RT)
 
 annotate :: Context -> (Maybe Position) -> Op -> Runtime Result
 annotate c p o = do x <- ask

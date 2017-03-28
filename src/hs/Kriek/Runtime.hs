@@ -33,4 +33,3 @@ macroexpand f = do f' <- macroexpand1 f
                      False -> macroexpand f'
   where h (x,y) = macroexpand y >>= \y' -> return (x, y')
 
--- eval :: Form ->

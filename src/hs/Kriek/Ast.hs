@@ -8,7 +8,6 @@ import Data.Scientific
 
 type Meta = [RecItem]
 
-
 data Name = Name String
           | NSName String String
   deriving (Eq, Generic, Hashable)
