@@ -99,8 +99,8 @@ kAst = kQSym <|> kList <|> kTuple <|> kString <|> kKeyword <|> kChar <|> kNil <|
 
 form :: Parser Form
 form = do p <- sourcePos
-          m <- optional kMeta <* many ws
-          o <- kAst
+          m <- many ws *> optional kMeta
+          o <- many ws *> kAst
           return $ Form o (Just p) m
 
 program :: Parser [Form]
