@@ -19,9 +19,6 @@ wsc = many (ws <|> kComment) >> return ()
 mwsc :: Parser ()
 mwsc = some (ws <|> kComment) >> return ()
 
-wscSep :: Parser a -> Parser [a]
-wscSep a = sepBy a mwsc
-
 trim :: Parser a -> Parser a
 trim p = wsc *> p <* wsc
 
@@ -104,4 +101,4 @@ form = do p <- sourcePos
           return $ Form o (Just p) m
 
 program :: Parser [Form]
-program = trim $ wscSep form
+program = trim $ sepBy form mwsc
