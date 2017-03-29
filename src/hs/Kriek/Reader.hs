@@ -81,13 +81,13 @@ kTuple = ATuple <$> kListy ('[',']')
 
 kMeta :: Parser Meta
 kMeta = do _ <- string "^{"
-           ris <- wscSep kRecItem
+           ris <- sepBy kRecItem ws
            _ <- char '}'
            return ris
 
 kRecItem :: Parser RecItem
 kRecItem = do f1 <- form
-              _ <- skipSome space
+              _ <- some ws
               f2 <- form
               return (f1,f2)
 
@@ -99,8 +99,8 @@ kAst = kQSym <|> kList <|> kTuple <|> kString <|> kKeyword <|> kChar <|> kNil <|
 
 form :: Parser Form
 form = do p <- sourcePos
-          m <- optional kMeta
-          o <- kAst <* wsc
+          m <- optional kMeta <* many ws
+          o <- kAst
           return $ Form o (Just p) m
 
 program :: Parser [Form]
