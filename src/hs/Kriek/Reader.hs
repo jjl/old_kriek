@@ -52,7 +52,7 @@ kQSym = between (char '|') (char '|') h
 kKeyword :: Parser AST
 kKeyword = do _ <- char ':'
               s <- oneOf start <?> "keyword start character"
-              r <- some (oneOf rest) <?> "keyword character"
+              r <- many (oneOf rest) <?> "keyword character"
               return $ AKeyword (Name $ s:r)
   where start = "abcdefghijklmnopqrstuvwxyz-"
         rest = "1234567890:" ++ start
@@ -79,13 +79,11 @@ kList = AList <$> kListy ('(',')')
 kTuple :: Parser AST
 kTuple = ATuple <$> kListy ('[',']')
 
--- kMeta :: Parser (Maybe (Meta a))
--- kMeta = do _ <- string "^{" >> wsc
---            ris <- wscSep kRecItem
---            _ <- skipMany ws >> char '}'
---            return $ case ris of
---              [] -> Nothing
---              _ -> Just ris
+kMeta :: Parser Meta
+kMeta = do _ <- string "^{"
+           ris <- wscSep kRecItem
+           _ <- char '}'
+           return ris
 
 kRecItem :: Parser RecItem
 kRecItem = do f1 <- form
@@ -101,9 +99,9 @@ kAst = kQSym <|> kList <|> kTuple <|> kString <|> kKeyword <|> kChar <|> kNil <|
 
 form :: Parser Form
 form = do p <- sourcePos
-          -- m <- kMeta     -- FIXME: this is optional
+          m <- optional kMeta
           o <- kAst <* wsc
-          return $ Form o (Just p) Nothing
+          return $ Form o (Just p) m
 
 program :: Parser [Form]
 program = trim $ wscSep form

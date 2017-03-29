@@ -53,7 +53,5 @@ instance Show AST where
   show (AKeyword n) = ':':(show n)
   show (AList    l) = "(" ++ (intercalate ", " (fmap show l)) ++ ")"
   show (ATuple   l) = "[" ++ (intercalate ", " (fmap show l)) ++ "]"
-  show (ARecord  l) = "{" ++ (intercalate ", " (fmap h l)) ++"}"
+  show (ARecord  l) = "{" ++ (intercalate ", " (fmap h l)) ++ "}"
     where h ((Form k _ _),(Form v _ _)) = (show k) ++ ' ':(show v)
-
-

@@ -7,7 +7,7 @@ import Control.Monad.Except
 import qualified Data.HashMap.Strict as M
 import Kriek.Ast
 
-type Fn = [Form] -> Runtime (Form)
+type Fn = [Form] -> Runtime Form
 
 type NamedForm = (String, Form)
 
@@ -42,5 +42,3 @@ data State = State
 
 newState :: State
 newState = State [] M.empty M.empty
-
-    
