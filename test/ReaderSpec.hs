@@ -36,6 +36,12 @@ spec = do
       parseForm "a" `shouldParse` ASymbol (Name "a")
     it "parses full words" $
       parseForm "caramel" `shouldParse` ASymbol (Name "caramel")
+    it "parses uppercase words" $
+      parseForm "FOOD" `shouldParse` ASymbol (Name "FOOD")
+    it "parses question marks" $
+      parseForm "edible?" `shouldParse` ASymbol (Name "edible?")
+    it "parses exclamation marks" $
+      parseForm "eat!" `shouldParse` ASymbol (Name "eat!")
     it "parses combinations of letters and numbers" $
       parseForm "a1b2" `shouldParse` ASymbol (Name "a1b2")
     it "fails when a digit is used as a first character" $
@@ -50,6 +56,12 @@ spec = do
       parseForm "|a|" `shouldParse` ASymbol (Name "a")
     it "parses full words" $
       parseForm "|caramel|" `shouldParse` ASymbol (Name "caramel")
+    it "parses uppercase words" $
+      parseForm "|FOOD|" `shouldParse` ASymbol (Name "FOOD")
+    it "parses question marks" $
+      parseForm "|edible?|" `shouldParse` ASymbol (Name "edible?")
+    it "parses exclamation marks" $
+      parseForm "|eat!|" `shouldParse` ASymbol (Name "eat!")
     it "parses combinations of letters and numbers" $
       parseForm "|a1b2|" `shouldParse` ASymbol (Name "a1b2")
     it "fails when a digit is used as a first character" $
@@ -65,6 +77,27 @@ spec = do
       parse form "|a\nnewline|" `shouldFailOn` "\n"
     it "fails when not closed" $
       parse form "|not-finished" `shouldFailOn` "d"
+
+  -- FIXME: Duplication with symbols and quasi-symbols
+  describe "keywords" $ do
+    it "parses single characters" $
+      parseForm ":a" `shouldParse` AKeyword "a"
+    it "parses full words" $
+      parseForm ":cats" `shouldParse` AKeyword "cats"
+    it "parses uppercase words" $
+      parseForm ":FOOD" `shouldParse` AKeyword "FOOD"
+    it "parses question marks" $
+      parseForm ":edible?" `shouldParse` AKeyword "edible?"
+    it "parses exclamation marks" $
+      parseForm ":eat!" `shouldParse` AKeyword "eat!"
+    it "parses combinations of letters and numbers" $
+      parseForm ":b12" `shouldParse` AKeyword "b12"
+    it "fails when a digit is used as a first character" $
+      parse form ":12daysof" `shouldFailOn` "1"
+    it "parses kebab case" $
+      parseForm ":cats-and-reddit" `shouldParse` AKeyword "cats-and-reddit"
+    it "fails with namespaces" $
+      parse form ":my-ns/your-var" `shouldFailOn` "/"
 
   describe "integers" $ do
     it "parses single digits" $
@@ -83,20 +116,6 @@ spec = do
       parseForm "9.81e+23" `shouldParse` AFloat 9.81e+23
     it "works with scientific notation (negative)" $
       parseForm "2.15e-10" `shouldParse` AFloat 2.15e-10
-
-  describe "keywords" $ do
-    it "parses single characters" $
-      parseForm ":a" `shouldParse` AKeyword "a"
-    it "parses full words" $
-      parseForm ":cats" `shouldParse` AKeyword "cats"
-    it "parses combinations of letters and numbers" $
-      parseForm ":b12" `shouldParse` AKeyword "b12"
-    it "fails when a digit is used as a first character" $
-      parse form ":12daysof" `shouldFailOn` "1"
-    it "parses kebab case" $
-      parseForm ":cats-and-reddit" `shouldParse` AKeyword "cats-and-reddit"
-    it "fails with namespaces" $
-      parse form ":my-ns/your-var" `shouldFailOn` "/"
 
   it "parses nil" $ parseForm "nil" `shouldParse` ANil
 
