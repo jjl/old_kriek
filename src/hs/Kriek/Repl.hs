@@ -1,6 +1,6 @@
-module Kriek.Repl (repl) where
+module Kriek.Repl where
 
-import Kriek.Ast
+import Kriek.Data
 import Kriek.Reader (program)
 import Kriek.Ir
 import Control.Monad.State.Strict hiding (State)
@@ -26,13 +26,13 @@ read = do
           return []
         Right x -> return x
 
-eval :: State -> [Form] -> IO (State, [Form])
-eval s f = return (s,f) -- runStateT
+-- eval :: File -> [Form] -> IO (File, [Form])
+-- eval s f = return (s,f) -- runStateT
 
-print :: [Form] -> IO ()
-print = putStrLn . show
+-- print :: [Form] -> IO ()
+-- print = putStrLn . show
 
-repl :: State -> IO ()
-repl s = read >>= eval s >>= h
-  where h (s2, f) = print f >> repl s2
+-- repl :: File -> IO ()
+-- repl s = read >>= eval s >>= h
+--   where h (s2, f) = print f >> repl s2
 
