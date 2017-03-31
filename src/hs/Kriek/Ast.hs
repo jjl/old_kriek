@@ -33,7 +33,7 @@ data AST
   | AFloat Scientific
   | AChar Char
   | ASymbol Name
-  | AKeyword Name
+  | AKeyword String
   | AString String
   | AList [Form]
   | ATuple [Form]

@@ -4,7 +4,7 @@ import Kriek.Ast
 import Control.Applicative
 import Control.Monad.State
 import Data.Scientific (isInteger, coefficient)
-import Text.Megaparsec hiding (Token)
+import Text.Megaparsec
 import Text.Megaparsec.String
 import qualified Data.List.NonEmpty as LNE
 import qualified Text.Megaparsec.Lexer as L
@@ -53,7 +53,7 @@ kKeyword :: Parser AST
 kKeyword = do _ <- char ':'
               s <- oneOf start <?> "keyword start character"
               r <- some (oneOf rest) <?> "keyword character"
-              return $ AKeyword (Name $ s:r)
+              return $ AKeyword $ s:r
   where start = "abcdefghijklmnopqrstuvwxyz-"
         rest = "1234567890:" ++ start
 
