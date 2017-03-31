@@ -31,7 +31,7 @@ library
                      , scientific
                      , hashable
                      , containers
-                     , lens
+                     , lens-family-core
                      , language-javascript
                      , parsers
                      , megaparsec

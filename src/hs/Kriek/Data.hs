@@ -1,4 +1,4 @@
-{-# language DeriveGeneric, DeriveAnyClass #-}
+{-# language DeriveGeneric, DeriveAnyClass, FlexibleInstances, MultiParamTypeClasses, RankNTypes #-}
 module Kriek.Data where
 
 import GHC.Generics (Generic)
@@ -29,6 +29,17 @@ data Position = Position { filename :: String, line :: Word, col :: Word }
   deriving (Eq, Generic, Hashable)
 
 type Meta a = HashMap a a
+
+newtype Fn m t = Fn ([t] -> m t)
+  deriving (Generic)
+
+instance Show (Fn m t) where
+  show _ = "<function>"
+instance Hashable (Fn m t) where
+  hashWithSalt _ _ = 0
+
+instance Eq (Fn m t) where
+  _ == _ = False
 
 data AST a
   = ANil
@@ -64,11 +75,17 @@ instance Show a => Show (AST a) where
   show (ARecord  l) = "{" ++ (intercalate ", " (fmap h l)) ++"}"
     where h (k,v) = (show k) ++ ' ':(show v)
 
+class HasAST a where
+  ast :: a -> AST a
+
+-- class MaybeHasAST a where
+--   mast :: a -> Maybe (AST a)
+  
 data Form = Form (AST Form) (Maybe Position) (Maybe (Meta Form))
   deriving (Generic)
 
-ast :: Form -> AST Form
-ast (Form a _ _) = a
+instance HasAST Form where
+  ast (Form a _ _) = a
 
 instance Show Form where
   show (Form a _ _) = show a
@@ -78,3 +95,28 @@ instance Eq Form where
 
 instance Hashable Form where
   hashWithSalt i (Form a _ _) = hashWithSalt i a
+
+data Error = Unimplemented
+           | Unexpected String
+           | Expected String
+           | ExpectedSome [String]
+           | ReboundAlias String String
+           | Errors [Error]
+
+juxt :: (a -> b) -> (c -> d) -> (a,c) -> (b,d)
+juxt f1 f2 (a,c) = (f1 a, f2 c)
+
+pair f = juxt f f
+
+-- reform :: HasAST m b => (AST m a -> a) -> b -> AST m a
+-- reform w b = case (ast b) of
+--   ANil -> ANil
+--   AInt i -> AInt i
+--   AFloat f -> AFloat f
+--   AChar c -> AChar c
+--   ASymbol s -> ASymbol s
+--   AKeyword k -> AKeyword k
+--   AString s -> AString s
+--   AList l -> AList $ fmap (w . reform w) l
+--   ATuple t -> ATuple $ fmap (w . reform w) t
+--   ARecord r -> ARecord $ fmap (pair $ w . reform w) r

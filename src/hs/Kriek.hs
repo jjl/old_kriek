@@ -3,6 +3,7 @@ module Kriek where
 
 import qualified Kriek.Compiler as C
 import qualified Kriek.Repl as R
+import Kriek.Runtime (newContext)
 import Kriek.Ir
 import System.Console.CmdArgs.Implicit
 
@@ -25,8 +26,8 @@ mode = cmdArgsMode $ modes [repl, compile &= auto]
   &= help "A statically typed lisp-like language"
 
 main :: IO ()
-main = do putStrLn "hello world"
-  -- args <- cmdArgsRun mode
-  -- case args of
-  --   Repl -> R.repl newState
-  --   Compile src out -> C.compileFile src out
+main = do
+  args <- cmdArgsRun mode
+  case args of
+    Repl -> R.repl newContext
+    Compile src out -> C.compileFile src out

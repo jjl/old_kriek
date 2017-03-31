@@ -8,17 +8,16 @@ import qualified Data.HashMap.Strict as M
 import Kriek.Data
 
 
-data Fn = Fn
 
 -- type Runtime a r = ReaderT (Scope a) (StateT (State a) IO) r
 
-data RT = RTFn Fn
+-- data RT = RTFn Fn
 
-instance Show RT where
-  show (RTFn _) = "function"
+-- instance Show RT where
+--   show (RTFn _) = "function"
 
-instance Eq RT where
-  _ == _ = False
+-- instance Eq RT where
+--   _ == _ = False
 
 -- data IName = IName Name
 --            | IRename { rFrom :: Name, rTo ::  Name }

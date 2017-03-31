@@ -1,8 +1,10 @@
 {-# LANGUAGE Strict, DeriveGeneric, FlexibleInstances, TupleSections #-}
-module Kriek.Scanner (scan) where
+module Kriek.Scanner
+  ( scan
+  , Op(..), Import(..), Value
+  ) where
 
 import Control.Monad.Trans.Either
-import Control.Monad.State.Strict hiding (State)
 import GHC.Generics (Generic)
 import Data.Either (partitionEithers)
 import Data.Scientific (Scientific)
@@ -14,25 +16,6 @@ import Kriek.Ir
 import Kriek.Types
 import Prelude hiding (read, lookup)
 
-data Error = Unimplemented
-           | Unexpected Form
-           | Expected String
-           | ExpectedSome [String]
-           | Errors [Error]
-
-data Scope = Scope { sRec :: HashSet Name }
-
-data FileScan = FileScan
-  { fileModImports :: HashMap String String
-  , fileDefImports :: HashMap String (String, String)
-  , fileDefs :: HashSet String
-  , stMacros :: HashMap Name Fn }
-
-newFile :: FileScan
-newFile = FileScan HM.empty HM.empty HS.empty HM.empty
-
-type Result = Either Error Op
-
 type Scanner r = EitherT Error IO r
 
 type Value = AST Op
@@ -40,6 +23,7 @@ type Value = AST Op
 data Import = Import  { iModule :: String
                       , iAs :: (Maybe String)
                       , iRefer :: [String] }
+  deriving (Eq)
 
 data Op = OValue Value
         | OImport Import
@@ -58,6 +42,7 @@ data Op = OValue Value
         -- | OCase
         -- | OVar
         -- | OCall Analysis [Analysis]
+  deriving (Eq)
 
 demandBareSymbol :: String -> Form -> Scanner String
 demandBareSymbol e (Form (ASymbol s) _ _) = if hasNS s
@@ -95,7 +80,7 @@ scanImport f@(Form (AList (_:l)) p _) = case l of
       (r3, refer) <- importRefer r2
       case r3 of
         [] -> right (OImport $ Import (name s) alias refer)
-        e:r4 -> left $ Unexpected e -- TODO: better error message. maybe they got the order wrong or misspelled or whatever
+        e:r4 -> left $ Unexpected (show e) -- TODO: better error message. maybe they got the order wrong or misspelled or whatever
 
 -- if condn then else
 scanIf :: Form -> Scanner Op
