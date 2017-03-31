@@ -25,6 +25,10 @@ formsFrom t = map (emptyForm . t)
 emptyForm :: AST -> Form
 emptyForm x = Form x Nothing Nothing
 
+-- Surround a string with another string.
+surround :: String -> String -> String
+surround c str = c ++ str ++ c
+
 spec :: Spec
 spec = do
   describe "symbols" $ do
@@ -40,6 +44,27 @@ spec = do
       parseForm "ice-cream" `shouldParse` ASymbol (Name "ice-cream")
     it "parses namespaces" $
       parseForm "chocolate/dark" `shouldParse` ASymbol (NSName "chocolate" "dark")
+
+  describe "quasi-symbols" $ do
+    it "parses single characters" $
+      parseForm "|a|" `shouldParse` ASymbol (Name "a")
+    it "parses full words" $
+      parseForm "|caramel|" `shouldParse` ASymbol (Name "caramel")
+    it "parses combinations of letters and numbers" $
+      parseForm "|a1b2|" `shouldParse` ASymbol (Name "a1b2")
+    it "fails when a digit is used as a first character" $
+      parse form "|1de|" `shouldFailOn` "1"
+    it "parses kebab case" $
+      parseForm "|ice-cream|" `shouldParse` ASymbol (Name "ice-cream")
+    it "parses namespaces" $
+      parseForm "|chocolate/dark|" `shouldParse` ASymbol (NSName "chocolate" "dark")
+    it "allows spaces" $
+      let sym = "chocolate chip  ice cream"
+      in parseForm (surround "|" sym) `shouldParse` ASymbol (Name sym)
+    it "fails on newline" $
+      parse form "|a\nnewline|" `shouldFailOn` "\n"
+    it "fails when not closed" $
+      parse form "|not-finished" `shouldFailOn` "d"
 
   describe "integers" $ do
     it "parses single digits" $
@@ -89,7 +114,7 @@ spec = do
     -- FIXME: generate a large block
     it "parses large blocks" $
       let txt = "This is a large block of text. Filler filler filler"
-      in parseForm ("\"" ++ txt ++ "\"") `shouldParse` AString txt
+      in parseForm (surround "\"" txt) `shouldParse` AString txt
     it "escapes special characters" $
       parseForm "\"A\\nNew\\tLine\"" `shouldParse` AString "A\nNew\tLine"
 
