@@ -3,9 +3,8 @@ module Kriek where
 
 import qualified Kriek.Compiler as C
 import qualified Kriek.Repl as R
-import Kriek.Runtime (newContext)
-import Kriek.Ir
-import System.Console.CmdArgs.Implicit
+import Kriek.Ir (newState)
+import System.Console.CmdArgs
 
 data KriekCmd = Repl
               | Compile { src :: FilePath, out :: FilePath }
@@ -29,5 +28,5 @@ main :: IO ()
 main = do
   args <- cmdArgsRun mode
   case args of
-    Repl -> R.repl newContext
+    Repl -> R.repl newState
     Compile src out -> C.compileFile src out

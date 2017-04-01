@@ -1,8 +1,7 @@
-module Kriek.Repl where
+module Kriek.Repl (repl) where
 
-import Kriek.Data
+import Kriek.Ast
 import Kriek.Reader (program)
-import Kriek.Runtime
 import Kriek.Ir
 import Control.Monad.State.Strict hiding (State)
 import Text.Megaparsec (parse, parseErrorPretty)
@@ -27,13 +26,13 @@ read = do
           return []
         Right x -> return x
 
--- eval :: File -> [Form] -> IO (File, [Form])
--- eval s f = return (s,f) -- runStateT
+eval :: State -> [Form] -> IO (State, [Form])
+eval s f = return (s,f) -- runStateT
 
 print :: [Form] -> IO ()
 print = putStrLn . show
 
-repl :: Context -> IO ()
-repl c = read >>= print >> repl c
---  where h (c2, f) = print f >> repl c2
+repl :: State -> IO ()
+repl s = read >>= eval s >>= h
+  where h (s2, f) = print f >> repl s2
 
