@@ -11,7 +11,7 @@ compile :: Maybe FilePath -> String -> String
 compile path s = case parse program p s of
                    Left e -> error $ parseErrorPretty e
                    Right x -> show x
-  where p = fromMaybe "" path
+  where p = fromMaybe "(unknown)" path
 
 -- Compile file from `src` and store the output in `out`.
 compileFile :: FilePath -> FilePath -> IO ()

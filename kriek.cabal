@@ -16,20 +16,22 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src/hs
   exposed-modules:     Kriek
-                     , Kriek.Ast
+                     , Kriek.Data
                      , Kriek.Compiler
                      , Kriek.Ir
                      , Kriek.Reader
                      , Kriek.Repl
                      , Kriek.Runtime
                      , Kriek.Runtime.Library
+                     , Kriek.Scanner
+                     , Kriek.Types
   build-depends:       base >= 4.9 && < 5
                      , bytestring
                      , text
                      , scientific
                      , hashable
                      , containers
-                     , lens
+                     , lens-family-core
                      , language-javascript
                      , parsers
                      , megaparsec
@@ -37,6 +39,7 @@ library
                      -- , text-icu
                      , mtl
                      , transformers
+                     , either
                      , unordered-containers
   default-language:    Haskell2010
 
