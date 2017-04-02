@@ -10,11 +10,7 @@ type Meta = [RecItem]
 
 data Name = Name String
           | NSName String String
-  deriving (Eq, Generic, Hashable)
-
-instance Show Name where
-  show (Name s) = s
-  show (NSName n s) = s ++ '/':(show s)
+  deriving (Eq, Generic, Hashable, Show)
 
 data Position = Position { filename :: String, line :: Word, col :: Word }
   deriving (Eq, Generic, Hashable)
@@ -38,22 +34,7 @@ data AST
   | AList [Form]
   | ATuple [Form]
   | ARecord [RecItem]
-  deriving (Eq, Generic, Hashable)
+  deriving (Eq, Generic, Hashable, Show)
 
 instance Show Form where
   show (Form a _ _) = show a
-
-instance Show AST where
-  show ANil = "nil"
-  show (AInt i) = show i
-  show (AFloat  f) = show f
-  show (AChar   c) = show c
-  show (AString s) = "\"" ++ s ++ "\""
-  show (ASymbol  n) = show n
-  show (AKeyword n) = ':':(show n)
-  show (AList    l) = "(" ++ (intercalate ", " (fmap show l)) ++ ")"
-  show (ATuple   l) = "[" ++ (intercalate ", " (fmap show l)) ++ "]"
-  show (ARecord  l) = "{" ++ (intercalate ", " (fmap h l)) ++"}"
-    where h ((Form k _ _),(Form v _ _)) = (show k) ++ ' ':(show v)
-
-

@@ -8,25 +8,10 @@ import Text.Megaparsec
 import Text.Megaparsec.String
 import qualified Data.List.NonEmpty as LNE
 import qualified Text.Megaparsec.Lexer as L
-import Prelude hiding (any)
 
-ws :: Parser ()
-ws = oneOf " \n" >> return ()
-
-wsc :: Parser ()
-wsc = many (ws <|> kComment) >> return ()
-
-mwsc :: Parser ()
-mwsc = some (ws <|> kComment) >> return ()
-
-wscSep :: Parser a -> Parser [a]
-wscSep a = sepBy a mwsc
-
-trim :: Parser a -> Parser a
-trim p = wsc *> p <* wsc
-
-forbidden :: String
-forbidden = "\r\t\v"
+--
+-- Source positions
+--
 
 spToPos :: SourcePos -> Position
 spToPos (SourcePos n l c) = Position n (unPos l) (unPos c)
@@ -34,76 +19,91 @@ spToPos (SourcePos n l c) = Position n (unPos l) (unPos c)
 sourcePos :: Parser Position
 sourcePos = (spToPos . LNE.head . statePos) `liftM` getParserState
 
-kComment :: Parser ()
-kComment = L.skipLineComment ";"
+--
+-- Lexer
+--
+
+-- Space consumer
+sc :: Parser ()
+sc = L.space (void spaceChar) lineComment empty
+  where lineComment  = L.skipLineComment ";"
+
+lexeme :: Parser a -> Parser a
+lexeme = L.lexeme sc
+
+scSep :: Parser a -> Parser [a]
+scSep a = sepBy a sc
+
+--
+-- Syntax
+--
+-- Parses a identifier string
+identifier :: Parser String
+identifier = lexeme ((:) <$> firstChar <*> many nonFirstChar)
+  where
+    symbolChar = oneOf "!?+-*<=>?@^_~" <?> "symbol"
+    firstChar = letterChar <|> symbolChar
+    nonFirstChar = firstChar <|> numberChar
+
+symbol :: String -> Parser ()
+symbol s = void $ lexeme $ string s
+
+kMeta :: Parser Meta
+kMeta = symbol "^{" *> sepBy kRecItem sc <* symbol "}"
+
+name :: Parser Name
+name = lexeme $ try nsName <|> plainName
+  where
+    plainName = Name <$> identifier
+    nsName = do
+      ns <- identifier
+      void $ char '/'
+      name <- identifier
+      return $ NSName ns name
+
+kRecItem :: Parser RecItem
+kRecItem = (,) <$> form <*> form
+
+kNil :: Parser AST
+kNil = ANil <$ string "nil"
 
 kBareSym :: Parser AST
-kBareSym = do s <- oneOf start <?> "symbol start character"
-              r <- many (oneOf rest <?> "symbol character")
-              return $ ASymbol (Name $ s:r)
-  where start = "abcdefghijklmnopqrstuvwxyz"
-        rest = start ++ ""
-
-kQSym :: Parser AST
-kQSym = between (char '|') (char '|') h
-  where h = (ASymbol . Name) <$> some (noneOf banned)
-        banned = "|\n" ++ forbidden
+kBareSym = ASymbol <$> name
 
 kKeyword :: Parser AST
-kKeyword = do _ <- char ':'
-              s <- oneOf start <?> "keyword start character"
-              r <- some (oneOf rest) <?> "keyword character"
-              return $ AKeyword $ s:r
-  where start = "abcdefghijklmnopqrstuvwxyz-"
-        rest = "1234567890:" ++ start
+kKeyword = AKeyword <$> (symbol ":" *> identifier)
 
 kNum :: Parser AST
-kNum = do n <- L.signed (return ()) L.number
+kNum = do n <- L.signed sc (lexeme L.number)
           return $ if isInteger n
-                      then AInt (coefficient n)
-                      else AFloat n
-
-kString :: Parser AST
-kString = AString <$> (char '"' >> manyTill L.charLiteral (char '"'))
+                   then AInt (coefficient n)
+                   else AFloat n
 
 kChar :: Parser AST
 kChar = string "#\\" >> AChar <$> L.charLiteral
 
-kListy :: (Char, Char) -> Parser [Form]
-kListy (s,e) = between (char s) (char e) h
-  where h = trim $ sepBy form space
+kString :: Parser AST
+kString = AString <$> (char '"' >> manyTill L.charLiteral (char '"'))
+
+kListy :: (String, String) -> Parser [Form]
+kListy (s,e) = between (symbol s) (symbol e) h
+  where h = lexeme $ scSep form
 
 kList :: Parser AST
-kList = AList <$> kListy ('(',')')
+kList = AList <$> kListy ("(",")")
 
 kTuple :: Parser AST
-kTuple = ATuple <$> kListy ('[',']')
-
--- kMeta :: Parser (Maybe (Meta a))
--- kMeta = do _ <- string "^{" >> wsc
---            ris <- wscSep kRecItem
---            _ <- skipMany ws >> char '}'
---            return $ case ris of
---              [] -> Nothing
---              _ -> Just ris
-
-kRecItem :: Parser RecItem
-kRecItem = do f1 <- form
-              _ <- skipSome space
-              f2 <- form
-              return (f1,f2)
-
-kNil :: Parser AST
-kNil = string "nil" >> return ANil
+kTuple = ATuple <$> kListy ("[","]")
 
 kAst :: Parser AST
-kAst = kQSym <|> kList <|> kTuple <|> kString <|> kKeyword <|> kChar <|> kNil <|> kNum <|> kBareSym
+kAst = kNil <|> kKeyword <|> kBareSym <|> kNum <|>
+       kString <|> kChar <|> kList <|> kTuple
 
 form :: Parser Form
 form = do p <- sourcePos
-          -- m <- kMeta     -- FIXME: this is optional
-          o <- kAst <* wsc
-          return $ Form o (Just p) Nothing
+          m <- optional kMeta
+          o <- kAst
+          return $ Form o (Just p) m
 
 program :: Parser [Form]
-program = trim $ wscSep form
+program = lexeme $ scSep form

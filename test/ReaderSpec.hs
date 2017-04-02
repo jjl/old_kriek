@@ -45,38 +45,11 @@ spec = do
     it "parses combinations of letters and numbers" $
       parseForm "a1b2" `shouldParse` ASymbol (Name "a1b2")
     it "fails when a digit is used as a first character" $
-      parse form "1de" `shouldFailOn` "1"
+      parseForm `shouldFailOn` "1de"
     it "parses kebab case" $
       parseForm "ice-cream" `shouldParse` ASymbol (Name "ice-cream")
     it "parses namespaces" $
       parseForm "chocolate/dark" `shouldParse` ASymbol (NSName "chocolate" "dark")
-
-  describe "quasi-symbols" $ do
-    it "parses single characters" $
-      parseForm "|a|" `shouldParse` ASymbol (Name "a")
-    it "parses full words" $
-      parseForm "|caramel|" `shouldParse` ASymbol (Name "caramel")
-    it "parses uppercase words" $
-      parseForm "|FOOD|" `shouldParse` ASymbol (Name "FOOD")
-    it "parses question marks" $
-      parseForm "|edible?|" `shouldParse` ASymbol (Name "edible?")
-    it "parses exclamation marks" $
-      parseForm "|eat!|" `shouldParse` ASymbol (Name "eat!")
-    it "parses combinations of letters and numbers" $
-      parseForm "|a1b2|" `shouldParse` ASymbol (Name "a1b2")
-    it "fails when a digit is used as a first character" $
-      parse form "|1de|" `shouldFailOn` "1"
-    it "parses kebab case" $
-      parseForm "|ice-cream|" `shouldParse` ASymbol (Name "ice-cream")
-    it "parses namespaces" $
-      parseForm "|chocolate/dark|" `shouldParse` ASymbol (NSName "chocolate" "dark")
-    it "allows spaces" $
-      let sym = "chocolate chip  ice cream"
-      in parseForm (surround "|" sym) `shouldParse` ASymbol (Name sym)
-    it "fails on newline" $
-      parse form "|a\nnewline|" `shouldFailOn` "\n"
-    it "fails when not closed" $
-      parse form "|not-finished" `shouldFailOn` "d"
 
   -- FIXME: Duplication with symbols and quasi-symbols
   describe "keywords" $ do
@@ -93,11 +66,11 @@ spec = do
     it "parses combinations of letters and numbers" $
       parseForm ":b12" `shouldParse` AKeyword "b12"
     it "fails when a digit is used as a first character" $
-      parse form ":12daysof" `shouldFailOn` "1"
+      parseForm `shouldFailOn` ":12daysof"
     it "parses kebab case" $
       parseForm ":cats-and-reddit" `shouldParse` AKeyword "cats-and-reddit"
     it "fails with namespaces" $
-      parse form ":my-ns/your-var" `shouldFailOn` "/"
+      parseForm `shouldFailOn` ":my-ns/your-var"
 
   describe "integers" $ do
     it "parses single digits" $
@@ -106,12 +79,16 @@ spec = do
       parseForm "823" `shouldParse` AInt 823
     it "parses large values" $
       parseForm "7381319930213821312" `shouldParse` AInt 7381319930213821312
+    it "parses negative values" $
+      parseForm "-23" `shouldParse` AInt (-23)
 
   describe "decimals" $ do
     it "parses basic decimals" $
       parseForm "1.2" `shouldParse` AFloat 1.2
     it "parses large values" $
       parseForm "321.37543832175493213121" `shouldParse` AFloat 321.37543832175493213121
+    it "parses negative values" $
+      parseForm "-12.55" `shouldParse` AFloat (-12.55)
     it "works with scientific notation (positive)" $
       parseForm "9.81e+23" `shouldParse` AFloat 9.81e+23
     it "works with scientific notation (negative)" $
@@ -124,6 +101,8 @@ spec = do
       parseForm "#\\a" `shouldParse` AChar 'a'
     it "parses numbers as characters" $
       parseForm "#\\1" `shouldParse` AChar '1'
+    it "fails on multiple characters" $
+      parse form "#\\abc" `shouldFailOn` "b"
 
   describe "strings" $ do
     it "parses empty strings" $
@@ -149,7 +128,7 @@ spec = do
                              emptyForm (AChar 'b'),
                              emptyForm (AString "cee"),
                              emptyForm (AKeyword "d")]
-      in parseForm "[1 a 'b' \"cee\" :d]" `shouldParse` expected
+      in parseForm "[1 a #\\b \"cee\" :d]" `shouldParse` expected
     it "accepts nested values" $
       let expected = ATuple [emptyForm (ASymbol (Name "a")),
                              emptyForm (ATuple [emptyForm (ASymbol (Name "b")),
@@ -169,7 +148,7 @@ spec = do
                             emptyForm (AChar 'b'),
                             emptyForm (AString "cee"),
                             emptyForm (AKeyword "d")]
-      in parseForm "(1 a 'b' \"cee\" :d)" `shouldParse` expected
+      in parseForm "(1 a #\\b \"cee\" :d)" `shouldParse` expected
     it "accepts nested values" $
       let expected = AList [emptyForm (ASymbol (Name "a")),
                             emptyForm (AList [emptyForm (ASymbol (Name "b")),
@@ -177,3 +156,22 @@ spec = do
       in parseForm "(a (b c))" `shouldParse` expected
     it "allows arbitrary amounts of surrounding whitespace" $
       parseForm "( 1    2\n3   )" `shouldParse` AList (formsFrom AInt [1, 2, 3])
+
+  describe "meta" $ do
+    it "accepts multiple pairs" $
+      parseForm `shouldSucceedOn` "(def ^{:a 1 :b 2 :c 3} var 1)"
+    it "fails on odd number of items" $
+      parseForm `shouldFailOn` "(def ^{:a 1 :b} a)"
+    it "fails on nested meta" $
+      parseForm `shouldFailOn` "(def ^{:a 1 ^{:b 2} c 3} var 10)"
+    context "whitespace" $ do
+      it "allows whitespace before meta definition" $
+        parseForm `shouldSucceedOn` "(def   ^{:a 1} a)"
+      it "allows whitespace after meta definition" $
+        parseForm `shouldSucceedOn` "(def ^{:a 1}   a)"
+      it "allows whitespace between items" $
+        parseForm `shouldSucceedOn` "(def ^{:a  1   :b  2} a)"
+      it "allows whitespace before items" $
+        parseForm `shouldSucceedOn` "(def ^{  :a 1 :b 2} a)"
+      it "allows whitespace after items" $
+        parseForm `shouldSucceedOn` "(def ^{:a 1 :b 2   } a)"
