@@ -1,0 +1,241 @@
+
+jjl
+8:26 AM
+Apparently I should discuss CLJS-1986 (es6 generators) here
+8:27
+i wanted them for a build tool i'm writing in cljs. async/await will be supported in node soon and this is a stepping stone towards that
+8:27
+given that google closure supports transpiling them to es3, i'm not sure what the problem is
+thheller
+9:13 AM
+@jjl one issue is that while in development most people are using :none which does not go through closure
+jjl
+9:14 AM
+i considered that. i think most people develop against a modern browser
+thheller
+9:14 AM
+so it will break if their browser doesn't support it
+jjl
+9:14 AM
+also you need to actually use that feature
+thheller
+9:14 AM
+I have to run everything I do in IE10
+9:14
+which doesn't have await
+jjl
+9:15 AM
+neither does node yet (except on master). this is generators (function*, yield)
+thheller
+9:15 AM
+its also a dependency issue .. a library I may want to use may use it
+jjl
+9:15 AM
+nod. my use case was for node. i don't think it's such a compelling feature in the browser
+9:16
+this is for macchiato btw
+thheller
+9:16 AM
+people tend to use things they read about .. so if someone reads that CLJS does support await they will start using it
+jjl
+9:16 AM
+if we follow that reasoning, we never get any new things
+thheller
+9:16 AM
+and maybe miss the browser support issue
+9:17
+FWIW I think core.async is 10x better than await
+jjl
+9:17 AM
+i think forcing core.async upon users isn't a good thing in a library
+thheller
+9:17 AM
+it may look like it does the same thing but the core.async channels are so powerful
+9:18
+well forcing generators isn't any different?
+jjl
+9:19 AM
+forcing generators doesn't require you to ship another whole library
+thheller
+9:21 AM
+maybe once it supported everywhere ... until then you'd require the user to always use Closure even in development
+jjl
+9:21 AM
+if they used that feature, yes
+thheller
+9:22 AM
+like I said .. even if you put warning labels on things .. people will use it
+jjl
+9:22 AM
+"if your project (or a dependency thereof) uses this feature, you need to add this to your compiler options"
+9:23
+actually i think being able to tell closure what version of es to compile for would be nice
+thheller
+9:23 AM
+you can already do that part
+jjl
+9:23 AM
+oh there's an option for it?
+9:24
+neat
+thheller
+9:24 AM
+:language-in :language-out
+jjl
+9:26 AM
+okay, so if the user has that and :optimizations :simple in dev, they would be able to use this feature with this patch and still run it on ie10
+9:27
+so i suppose the next question is "how expensive is simple optimisation?"
+thheller
+9:28 AM
+any optimization other than :none breaks live reloading
+jjl
+9:28 AM
+ah
+9:29
+is that an intractable problem?
+thheller
+9:29 AM
+sort of .. with :simple or even :whitespace you just get one file
+9:30
+so you always reload everything instead of just one file
+9:30
+I'm sure that will cause a bunch of problems
+jjl
+9:30 AM
+hrm. i wonder if we can make closure not do that
+thheller
+9:30 AM
+well I suppose you could create a new compiler mode
+9:31
+than would process every compiled CLJS file with closure
+jjl
+9:31 AM
+in a 'do nothing except transpile' mode
+thheller
+9:31 AM
+yeah, that is basically what the js-modules stuff does
+9:32
+except processing other the .js not the generated js from .cljs of course
+jjl
+9:32 AM
+okay. that seems like something i could probably do
+thheller
+9:34 AM
+but FWIW I think it would be far more valuable to have everyone use core.async instead of adopting the many different async patterns there are in JS land
+9:35
+YMMV of course
+9:36
+but given that the JS world will still do its thing we have do adopt it anyways in some form
+jjl
+9:37 AM
+this is my concern
+thheller
+9:37 AM
+I don't know .. not my call to make
+jjl
+9:37 AM
+i want to play with them
+thheller
+9:37 AM
+you could probably do what you are doing in a library
+jjl
+9:38 AM
+i definitely don't want cljs to get left behind new features because despite being so futuristic we stick to generating code that is N major versions behind
+9:38
+i think that would be difficult
+9:38
+(in fact i don't believe it's possible)
+thheller
+9:40 AM
+you'd be surprised whats possible with a few with-redefs :wink:
+jjl
+9:40 AM
+correction; i don't believe it's possible without making me not want to use that library
+thheller
+9:40 AM
+I have a completely different (ns ...) handling than the default CLJS in shadow-build
+jjl
+9:41 AM
+what does yours do?
+thheller
+9:41 AM
+stricter parsing, less side effects (edited)
+9:41
+doesn't matter .. the end result is the same. Just an example of whats possible :wink: (edited)
+jjl
+9:42 AM
+sure, but i'm not feeling like maintaining a fork just to get features i can have in javascript
+thheller
+9:43 AM
+not a fork, but yes everyone wanting to use that would need to use your hack (edited)
+jjl
+9:43 AM
+or even maintaining a set of ugly hax
+thheller
+9:43 AM
+so it is dirty :wink:
+9:44
+maybe you should try your patch in a fork
+9:44
+and create some compelling examples why its a good idea to have generators
+jjl
+9:45 AM
+my compelling reason is "we're gonna have es7 soon, why can't we have things javascript can have?"
+9:46
+also my main alternative is node fibers and ewwwww
+thheller
+9:46 AM
+well .. we have something better already ... that is supported everywhere
+9:46
+will node rewrite everything to promises instead of callbacks?
+jjl
+9:47 AM
+there are wrappers in js already. it'll take time for node to migrate all the libs
+thheller
+9:47 AM
+so what is missing is a wrapper in CLJS to core.async? :wink:
+jjl
+9:48 AM
+i dunno, you seem pretty obsessed with only having one option to choose from
+thheller
+9:48 AM
+have you used core.async? beyond the basics? I mean transducers in channels, alt!, etc?
+jjl
+9:49 AM
+no, i've only done the basics. but it's totally overkill for what i need
+thheller
+9:52 AM
+what do you need? other than what (<! something) gives you? (edited)
+jjl
+9:54 AM
+pretty much that. i do not want to use core async.
+rauh
+10:04 AM
+Personally, I'd love to see async/yield/await support in cljs. I primarily use Promises for async stuff.
+thheller
+10:15 AM
+yeah might be useful. I don't know. I'm working with about 50/50 CLJ/CLJS and haven't used a single promise, so I'm obviously biased towards core.async.
+jiyinyiyong
+10:47 AM
+@dnolen https://github.com/clojure/clojurescript/blob/2171ae9859a2e982497764a04de10916aae68307/src/main/cljs/cljs/core.cljs#L1272-L1293 I got curious on this piece of code. I saw your comment like "TODO: we should remove this", what was the plan about that?
+GitHub
+clojure/clojurescript
+clojurescript - Clojure to JS compiler
+thheller
+11:12 AM
+@jjl on second though: you may only yield in generator functions right? that will be problematic with some constructs in CLJS as they introduce inner functions for scoping reasons
+jjl
+11:15 AM
+this currently only applies to the method of a function (i.e. one arity)
+11:15
+and yes, you will have to restrict yourself somewhat
+11:15
+it is possible we could do some tracking but then it's not such a small patch
+dnolen
+2:53 PM
+@jjl we need to step back, what actually problem is this solving for most users - why do they need a JS feature
+2:53
+any other discussion is completely secondary to that
+2:54
+no rationale, it’s not going to happen - “I want to use it for something I’m doing in Node.js” is not a rationale

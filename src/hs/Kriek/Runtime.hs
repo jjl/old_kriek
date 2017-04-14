@@ -1,7 +1,13 @@
+{-# language DuplicateRecordFields, LiberalTypeSynonyms, RankNTypes #-}
 module Kriek.Runtime where
 
+import Control.Lens ( makeLenses
+                    , (^.), (.~), (%~), (?~), (?=), (%=)
+                    , _1, _2, at, ix, Lens'(..))
 import Control.Monad.Trans.Either
 import Control.Monad.State.Strict
+import Data.Maybe
+import Data.List.Split (splitOn)
 import Data.HashMap.Strict as M
 import Data.HashSet as S
 import Kriek.Scanner
@@ -9,112 +15,168 @@ import Kriek.Ir
 import Kriek.Data
 import Prelude as P
 
-data Scope = Scope { sRec :: HashMap Name Sexp }
-newScope = Scope M.empty
+type ALens s t a b = forall f. Applicative f => (a -> f b) -> s -> f t 
+type ALens' s a = ALens s s a a
 
-data RT
+glo :: Lens' Context Global
+glo = _1
 
-type Runtime = EitherT Error (StateT Context IO)
+loc :: Lens' Context Local
+loc = _2
 
-type Sexp = Either RT (AST Value)
+maybeNamedModule :: String -> Lens' Context (Maybe Module)
+maybeNamedModule s = glo . modules . at s
 
-data Macro = Macro ([Form] -> Runtime Form)
+namedModule :: String -> ALens' Context Module
+namedModule s = glo . modules . ix s
 
-data Fn = Fn ([Value] -> Runtime Value)
+lookupModule :: String -> Runtime (Maybe Module)
+lookupModule m = (^. maybeNamedModule m) <$> get
 
-newtype Global = Global (HashMap (String,String) (AST Value))
+lookupQname :: String -> String -> Runtime (Maybe RT)
+lookupQname m n = (>>= M.lookup n . (^. defs)) <$> lookupModule m
 
-newGlobal :: Global
-newGlobal = Global M.empty
+curname :: Lens' Context String
+curname = loc . cur_module
 
-data Local = Local
-  { locModImports :: HashMap String String
-  , locDefImports :: HashMap String String
-  , locDefs :: HashMap String Value
-  , locMacros :: HashMap Name Macro
-  , locScope :: Scope}
+current :: Context -> ALens' Context Module
+current = namedModule . (^. curname)
 
-newLocal :: Local
-newLocal = Local M.empty M.empty M.empty M.empty newScope
+namedRefer :: String -> Context -> ALens' Context (Maybe String)
+namedRefer n c = current c . refers . at n
 
-type Context = (Global, Local)
+namedImport :: String -> Context -> ALens' Context (Maybe String)
+namedImport n c = current c . imports . at n
 
-newContext :: Context
-newContext = (newGlobal, newLocal)
+namedDef :: (Maybe String,String) -> Context -> ALens' Context (Maybe RT)
+namedDef (ns,n) c = maybe (current c) namedModule ns . defs . at n
 
-importModule :: String -> String -> Context -> Runtime Context
-importModule alias name (g,(Local mi di de ma sc)) =
-  case (M.lookup alias mi) of
-    Just v -> left $ ReboundAlias name v
-    _ -> right $ (g,Local (M.insert alias name mi) di de ma sc)
+findName :: (Maybe String, String) -> Runtime (Maybe RT)
+findName (ns,n) = do c <- get
+                     return $ (^. maybe (current c) namedModule ns . defs . at n) c
 
-referModule :: String -> [String] -> Context -> Runtime Context
-referModule mod names (g,(Local mi di de ma sc)) =
-  do ns <- mapM h names
-     let di' = di `mappend` (mconcat ns)
-     right (g, Local mi di' de ma sc)
-  where h k = case M.lookup k di of
-                Just m -> left $ ReboundAlias k m
-                _ -> right $ M.singleton k mod
+findMacro :: (Maybe String,String) -> Runtime (Maybe (Fn Runtime RT))
+findMacro (ns,n) = do c <- get
+                      let d = c ^. maybe (current c) namedModule ns . defs . at n
+                      return $ case d of
+                        Just (RMacro f _) -> Just f
+                        _ -> Nothing
 
-getLoc :: Runtime Local
-getLoc = gets snd
-getGlo :: Runtime Global
-getGlo = gets fst
+changeModule :: String -> Runtime ()
+changeModule m = curname %= const m
+
+defineValue :: String -> RT -> Runtime ()
+defineValue s v = do c <- get
+                     put $ (current c . defs . at s) ?~ v $ c
+                      
+-- FIXME: actually go and read the module
+importModule :: String -> String -> Runtime ()
+importModule alias name =
+  do c <- get
+     case c ^. (namedImport alias c) of
+       Just _ -> left $ ReboundAlias name alias
+       _ -> do _ <- changeModule name
+               -- FIXME: read the module
+               changeModule (c ^. curname)
+
+referModule :: String -> [String] -> Runtime ()
+referModule mod names =
+  do c <- get
+     ns <- mapM (h c) names
+     current c . refers %= (`mappend` (mconcat ns))
+  where h c k = do left Unimplemented
 
 special :: HashSet String
 special = S.fromList ["def"]
 
-findMacro :: Name -> Runtime (Maybe Macro)
-findMacro n = (M.lookup n . locMacros) <$> getLoc
+isSpecial :: (Maybe String, String) -> Bool
+isSpecial (Just _,_) = False
+isSpecial (_,n) = S.member n special
 
-macroexpand1 :: Form -> Runtime Form
-macroexpand1 f@(Form (AList ((Form (ASymbol n) _ _):rst)) _ _) =
-  do m <- (findMacro n)
-     case m of
-       Just (Macro mac) -> mac rst
-       _ -> return f
+macroexpand1 :: RT -> Runtime RT
+macroexpand1 f@(RList ((RT (RSymbol n _)):rst) _) =
+  if isSpecial n then return f
+  else do c <- get
+          m <- findMacro n
+          case m of
+            Just (Fn f) -> case mapM ropToRt rst of
+                             Right r -> f r
+                             Left l -> left $ Unexpected (show l)
+            _ -> return f
 macroexpand1 f = return f
 
-macroexpand :: Form -> Runtime Form
+macroexpand :: RT -> Runtime RT
 macroexpand f = do f' <- macroexpand1 f
-                   case f == f' of
-                     True -> case f' of
-                       Form (AList (s:r)) p m ->
-                         do r' <- mapM macroexpand r
-                            return $ Form (AList (s:r')) p m
-                       Form (ATuple l) p m ->
-                         do l' <- mapM macroexpand l
-                            return $ Form (ATuple l') p m
-                       Form (ARecord l) p m ->
-                         do l' <- mapM h l
-                            return $ Form (ARecord l') p m
+                   if f == f' then
+                     case f' of
+                       RList (s:r) m ->
+                         do case mapM ropToRt r of
+                              Right r' -> do r''<- mapM macroexpand r'
+                                             return $ RList (s:(fmap RT r'')) m
+                              Left l -> left $ Unexpected (show l)
+                       RTuple l m ->
+                         do case mapM ropToRt l of
+                              Right r -> do r'<- mapM macroexpand r
+                                            return $ RTuple (fmap RT r') m
+                              Left l -> left $ Unexpected (show l)
+                       RRecord l m ->
+                         do case mapM h2 l of
+                              Right r -> do r'<- mapM h r
+                                            return $ RRecord r' m
+                              Left l -> left $ Unexpected (show l)
                        _ -> return f'
-                     False -> macroexpand f'
-  where h (x,y) = macroexpand y >>= \y' -> return (x, y')
+                   else macroexpand f'
+  where h (x,y) = macroexpand y >>= \y' -> return (RT x, RT y')
+        h2 (x,y) = do x' <- ropToRt x; y' <- ropToRt y; return (x',y')
 
-evalValue :: Op -> Runtime Value
-evalValue (OValue v) = left Unimplemented
+evalValue :: RT -> Runtime RT
+evalValue f = case f of
+    RList    l m -> do l' <- mapM eval l
+                       return $ RList (fmap RT l') m
+    RTuple   l m -> do l' <- mapM eval l
+                       return $ RTuple (fmap RT l') m
+    RRecord  l m -> do l' <- mapM h l
+                       return $ RRecord l' m
+    _ -> return f
+  where h (l,r) = do l' <- eval l
+                     r' <- eval r
+                     return (RT l',RT r')
+                 
+defaultImportAlias :: String -> String
+defaultImportAlias = last . splitOn "."
 
-defaultImportAlias m = m -- FIXME: take the bit after the last dot
+evalImport :: Import -> Runtime RT
+evalImport (Import m a r) =
+  importModule m a' >> referModule m r >> right RNil
+  where a' = maybe (defaultImportAlias m) id a
 
-evalImport :: Op -> Runtime Value
-evalImport (OImport (Import m a r)) =
-  get >>= importModule m a' >>= referModule m r >>= put >> right ANil
-  where a' = maybe m id a
+evalIf :: Op -> Op -> Op -> Runtime RT
+evalIf c t e =
+  do c' <- eval c
+     case c' of
+       RBool True  _ -> eval t
+       RBool False _ -> eval e
 
-evalIf :: Op -> Runtime Value
-evalIf (OIf c t e) = left Unimplemented
+evalDef :: String -> Op -> Runtime RT
+evalDef n v = eval v >>= defineValue n >> return RNil
 
-evalDef :: Op -> Runtime Value
-evalDef (ODef n v) = left Unimplemented
+-- evalRefLexical :: String -> Runtime RT
+evalRefRefer :: String -> Runtime RT
+evalRefRefer n = do c <- get
+                    maybe (left $ UndefinedRef n) h (c ^. namedRefer n c)
+                      where h m = fromJust <$> lookupQname m n
+-- evalRefDef :: String -> String -> Runtime RT
 
-eval :: Op -> Runtime Value
+evalLookup :: (Maybe String, String) -> Runtime RT
+evalLookup (Just ns,n) = left Unimplemented
+evalLookup (_,n) = left Unimplemented
+
+eval :: Op -> Runtime RT
 eval o = case o of
-  OValue _  -> evalValue o
-  OImport _ -> evalImport o
-  OIf _ _ _ -> evalIf o
-  ODef _ _  -> evalDef o
+  RT v  -> evalValue v
+  OImport i -> evalImport i
+  OIf i t e -> evalIf i t e
+  ODef n v  -> evalDef n v
 
 -- subscope :: Runtime a -> Runtime a
 -- subscope = withStateT recurse

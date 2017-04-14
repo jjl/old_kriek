@@ -3,7 +3,7 @@ module Kriek where
 
 import qualified Kriek.Compiler as C
 import qualified Kriek.Repl as R
-import Kriek.Runtime (newContext)
+import Kriek.Data
 import Kriek.Ir
 import System.Console.CmdArgs.Implicit
 
@@ -29,5 +29,5 @@ main :: IO ()
 main = do
   args <- cmdArgsRun mode
   case args of
-    Repl -> R.repl newContext
+    Repl -> R.repl $ newContext "<repl>" ["."]
     Compile src out -> C.compileFile src out
