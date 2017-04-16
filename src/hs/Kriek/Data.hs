@@ -4,6 +4,7 @@ module Kriek.Data where
 import Control.Lens (makeLenses, (^.), (.~), (%~),_1, _2, Lens'(..))
 import GHC.Generics (Generic)
 import Data.HashMap.Strict as M
+import Control.Monad.Reader
 import Control.Monad.Trans.Either
 import Control.Monad.State.Strict
 import Data.Hashable (Hashable)
@@ -21,11 +22,15 @@ type SameMap a = HashMap a a
 type ASTMap = SameMap AST
 type RTMap = SameMap RT
 
-newtype Fn m t = Fn ([t] -> m t)
-  deriving (Generic)
+data Fn m t = Builtin ([t] -> m t)
+            | Defined [Op]
+            deriving (Generic)
 
 instance Show (Fn m t) where
-  show _ = "<function>"
+  show (Builtin f) = "<builtin>"
+  show (Defined f) = "<function>"
+
+-- Don't use functions as hashmap keys, they will all clash
 instance Hashable (Fn m t) where
   hashWithSalt _ _ = 0
 
@@ -125,26 +130,17 @@ rtToAst a = case a of
 
 data Op
   = RT RT
-  | ONil
   | OIf Op Op Op
-  | ODef String Op
-  | OFun (Maybe String)
+  | OQuote
+  | ODo [Op]
+  | ODef String (Maybe String) Op
+  | OFun (Maybe String) [Op] [Op]
   | OImport Import
-  | OLet (String, Op) [Op]
-  | ORefLexical String
-  | ORefRefer String
-  | ORefDef String String
-  -- | OFn
-  -- | ODo [Analysis]
-  -- | OLet
-  -- | ONew
-  -- | OSet
-  -- | ODeftype
-  -- | ODefrecord
-  -- | OQuote
-  -- | OCase
-  -- | OVar
-  -- | OCall Analysis [Analysis]
+  | OLet [(String, Bool, Op)] [Op]
+  | OLexical String
+  | OLocal String
+  | ORef String String
+  | OInvoke (Fn Runtime RT) [Op]
   deriving (Eq, Generic, Hashable, Show)
 
 ropToRt (RT r) = Right r
@@ -164,19 +160,21 @@ instance Show RT where
     where h (k,v) = (show k) ++ ' ':(show v)
   show (RFn _ _) = "<function>"
 
-type Runtime = EitherT Error (StateT Context IO)
+type Runtime = EitherT Error (ReaderT Scope (StateT Context IO))
 
 data Error = Unimplemented
            | Unexpected String
            | Expected String
            | ExpectedSome [String]
+           | UndefinedLexical String
+           | UndefinedLocal String
+           | UndefinedRef String String
            | ReboundAlias String String
-           | UndefinedRef String
            | Errors [Error]
 
 type QName = (Maybe String, String)
 
-data Scope = Scope { _recursive :: HashMap String RT }
+data Scope = Scope { _recursive :: HashMap String RT, _nonrec :: HashMap String RT }
 
 type NameMap = HashMap String
 
@@ -197,16 +195,15 @@ newGlobal :: String -> [String] -> Global
 newGlobal m cp = Global (singleton m newModule) cp
 
 data Local = Local
-  { _cur_module :: String
-  , _lexicals :: Scope }
+  { _cur_module :: String }
 
 newLocal :: String -> Local
-newLocal = (flip Local) newScope
+newLocal = Local
 
-type Context = (Global, Local)
+data Context = Context { _ctxGlobal :: Global, _ctxLocal :: Local }
 
 newContext :: String -> [String] -> Context
-newContext m cp = (newGlobal m cp, newLocal m)
+newContext m cp = Context (newGlobal m cp) (newLocal m)
 
 data Import = Import  { iModule :: String
                       , iAs :: (Maybe String)
@@ -222,6 +219,7 @@ makeLenses ''Scope
 makeLenses ''Local
 makeLenses ''Global
 makeLenses ''Module
+makeLenses ''Context
 
 juxt :: (a -> b) -> (c -> d) -> (a,c) -> (b,d)
 juxt f1 f2 (a,c) = (f1 a, f2 c)

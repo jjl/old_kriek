@@ -19,7 +19,7 @@ import Kriek.Types
 import Prelude hiding (read, lookup)
 
 demandBareSymbol :: String -> AST -> Runtime String
-demandBareSymbol e (ASymbol (Nothing, s) _) = right s
+demandBareSymbol e (ASymbol (Nothing, s) _) = return s
 demandBareSymbol e _ = left (Expected $ "bare symbol (" ++ e ++ ")")
 
 -- :as foo
@@ -75,16 +75,16 @@ scanTuple f@(ATuple t _) = (RT . (flip RTuple) M.empty) <$> (mapM scan t)
 
 scan :: AST -> Runtime Op
 scan a = case a of
-  ANil       -> right $ RT RNil
-  AInt i _     -> right $ RT (RInt i M.empty)
-  AFloat f _   -> right $ RT (RFloat f M.empty)
-  AChar ch _  -> right $ RT (RChar ch M.empty)
-  ASymbol n _ -> right $ RT (RSymbol n M.empty)
-  AKeyword k _-> right $ RT (RKeyword k M.empty)
-  AList _ _   -> scanList a
-  ATuple _ _  -> scanTuple a
+  ANil         -> return $ RT RNil
+  AInt i _     -> return $ RT (RInt i M.empty)
+  AFloat f _   -> return $ RT (RFloat f M.empty)
+  AChar ch _   -> return $ RT (RChar ch M.empty)
+  ASymbol n _  -> return $ RT (RSymbol n M.empty)
+  AKeyword k _ -> return $ RT (RKeyword k M.empty)
+  AList _ _    -> scanList a
+  ATuple _ _   -> scanTuple a
   -- ARecord r -> scanRecord c f
-  _ -> left $ Unimplemented
+  _ -> left Unimplemented
 
 -- scanListType :: [AST] -> Runtime (Maybe Type)
 -- scanListType f = return Nothing
