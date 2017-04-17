@@ -58,8 +58,8 @@ name = lexeme $ try nsName <|> plainName
     nsName = do
       ns <- identifier
       void $ char '/'
-      name <- identifier
-      return $ NSName ns name
+      ident <- identifier
+      return $ NSName ns ident
 
 kRecItem :: Parser RecItem
 kRecItem = (,) <$> form <*> form
